@@ -4,8 +4,12 @@ module Spree
   module Calculator::Shipping
     module Fedex
       class Ground < Spree::Calculator::Shipping::Fedex::Base
+        def self.service_api_name
+          'FedEx FEDEX_GROUND'
+        end
+
         def self.description
-          I18n.t('spree.fedex.ground')
+          "FedEx Ground"
         end
       end
     end

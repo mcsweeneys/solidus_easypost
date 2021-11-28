@@ -31,5 +31,8 @@ module SolidusActiveShipping
 
     # General
     preference :test_mode, :boolean, default: false
+
+    preference :easypost_login, :string, default: 'eaypost_login'
+    preference :easypost_api_key, :string, default: 'eaypost_api_key'
   end
 end

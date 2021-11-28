@@ -37,13 +37,14 @@ module Spree
 
           return nil if rates_result.is_a?(Spree::ShippingError)
           return nil if rates_result.empty?
-          rate = rates_result[self.class.description]
+
+          rate = rates_result[self.class.service_api_name]
 
           return nil unless rate
           rate = rate.to_f + (Spree::ActiveShipping::Config[:handling_fee].to_f || 0.0)
 
           # divide by 100 since active_shipping rates are expressed as cents
-          rate / 100.0
+          # rate / 100.0
         end
 
         def timing(line_items)
@@ -121,14 +122,44 @@ module Spree
         end
 
         def retrieve_rates(origin, destination, shipment_packages)
-          response = carrier.find_rates(origin, destination, shipment_packages)
-          # turn this beastly array into a nice little hash
-          rates = response.rates.collect do |rate|
-            service_name = rate.service_name.encode('UTF-8')
-            [CGI.unescapeHTML(service_name), rate.price]
-          end
+          EasyPost.api_key = ENV['EASYPOST_API_KEY']
+
+          to_address = EasyPost::Address.create(
+            street1: destination.address1,
+            street2: destination.address2,
+            city: destination.city,
+            state: destination.state,
+            zip: destination.postal_code,
+            country: destination.country.code(:alpha2).value
+          )
+
+          from_address = EasyPost::Address.create(
+            street1: origin.address1,
+            street2: origin.address2,
+            city: origin.city,
+            state: origin.state,
+            zip: origin.postal_code,
+            country: origin.country.code(:alpha2).value
+          )
+
+          parcel = EasyPost::Parcel.create(
+            weight: shipment_packages.first.weight.to_f
+          )
+
+          shipment = EasyPost::Shipment.create(
+            :to_address => to_address,
+            :from_address => from_address,
+            :parcel => parcel,
+            options: {
+              special_rates_eligibility: 'USPS.MEDIAMAIL'
+            }
+          )
+
+          rates = shipment.rates.map{|r| ["#{r.carrier} #{r.service}", r.rate]}
           rate_hash = Hash[*rates.flatten]
+
           return rate_hash
+        # TODO: Deal with the API failures here. This isn't in ActiveShipping any longer!
         rescue ::ActiveShipping::Error => e
           if [::ActiveShipping::ResponseError].include?(e.class) && e.response.is_a?(::ActiveShipping::Response)
             params = e.response.params
@@ -176,7 +207,7 @@ module Spree
           order = package.order
           ship_address = package.order.ship_address
           contents_hash = Digest::MD5.hexdigest(package.contents.map { |content_item| content_item.variant.id.to_s + '_' + content_item.quantity.to_s }.join('|'))
-          @cache_key = "#{stock_location}#{carrier.name}-#{order.number}-#{ship_address.country.iso}-#{fetch_best_state_from_address(ship_address)}-#{ship_address.city}-#{ship_address.zipcode}-#{contents_hash}-#{I18n.locale}".delete(' ')
+          @cache_key = "#{stock_location}-#{order.number}-#{ship_address.country.iso}-#{fetch_best_state_from_address(ship_address)}-#{ship_address.city}-#{ship_address.zipcode}-#{contents_hash}-#{I18n.locale}".delete(' ')
         end
 
         def fetch_best_state_from_address(address)
