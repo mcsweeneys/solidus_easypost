@@ -3,6 +3,7 @@
 #
 # Digest::MD5 is used for cache_key generation.
 require 'digest/md5'
+require 'easypost'
 require_dependency 'spree/calculator'
 
 module Spree
@@ -14,11 +15,6 @@ module Spree
         end
 
         def available?(package)
-          # helps the available? method determine
-          # if rates are avaiable for this service
-          # before calling the carrier for rates
-          is_package_shippable?(package)
-
           !compute(package).nil?
         rescue Spree::ShippingError
           false
@@ -26,39 +22,46 @@ module Spree
 
         def compute_package(package)
           order = package.order
-          max_weight = get_max_weight(package)
 
           stock_location = package.stock_location
 
-          origin = build_location(stock_location)
-          destination = build_location(order.ship_address)
+          origin = stock_location
+          destination = order.ship_address
 
-          rates_result = retrieve_rates_from_cache(package, origin, destination, max_weight)
+          rates_result = retrieve_rates_from_cache(package, origin, destination)
 
           return nil if rates_result.is_a?(Spree::ShippingError)
           return nil if rates_result.empty?
 
-          rate = rates_result[self.class.service_api_name]
+          rate = rates_result[self.class.description]
 
           return nil unless rate
           rate = rate.to_f + (Spree::ActiveShipping::Config[:handling_fee].to_f || 0.0)
-
-          # divide by 100 since active_shipping rates are expressed as cents
-          # rate / 100.0
         end
 
         def timing(line_items)
           order = line_items.first.order
           # TODO: Figure out where stock_location is supposed to come from.
-          origin = ::ActiveShipping::Location.new(country: stock_location.country.iso,
-                                                  city: stock_location.city,
-                                                  state: (stock_location.state ? stock_location.state.abbr : stock_location.state_name),
-                                                  zip: stock_location.zipcode)
+          # TODO: Figure out what this method actually does.
+          origin = ::EasyPost::Address.create(
+            street1: origin.address1,
+            street2: origin.address2,
+            city: origin.city,
+            state: origin.state,
+            zip: origin.postal_code,
+            country: origin.country.code(:alpha2).value
+          )
+
           addr = order.ship_address
-          destination = ::ActiveShipping::Location.new(country: addr.country.iso,
-                                                       state: (addr.state ? addr.state.abbr : addr.state_name),
-                                                       city: addr.city,
-                                                       zip: addr.zipcode)
+          destination = ::EasyPost::Address.create(
+            street1: destination.address1,
+            street2: destination.address2,
+            city: destination.city,
+            state: destination.state,
+            zip: destination.postal_code,
+            country: destination.country.code(:alpha2).value
+          )
+
           timings_result = Rails.cache.fetch(cache_key(package) + '-timings') do
             retrieve_timings(origin, destination, packages(order))
           end
@@ -67,63 +70,13 @@ module Spree
           timings_result[description]
         end
 
-        protected
-
-        # weight limit in ounces or zero (if there is no limit)
-        def max_weight_for_country(_country)
-          0
-        end
-
         private
-
-        def get_max_weight(solidus_package)
-          order = solidus_package.order
-
-          # Default value from calculator
-          max_weight = max_weight_for_country(order.ship_address.country)
-
-          # If max_weight is zero or max_weight_per_package is less than max_weight
-          # We use the max_weight_per_package instead
-          if max_weight.zero? && max_weight_per_package.nonzero?
-            return max_weight_per_package
-          elsif max_weight > 0 && max_weight_per_package < max_weight && max_weight_per_package > 0
-            return max_weight_per_package
-          end
-
-          max_weight
-        end
 
         def package_builder
           @package_builder ||= Spree::PackageBuilder.new
         end
 
-        def max_weight_per_package
-          Spree::ActiveShipping::Config[:max_weight_per_package] * Spree::ActiveShipping::Config[:unit_multiplier]
-        end
-
-        # check for known limitations inside a package
-        # that will limit you from shipping using a service
-        def is_package_shippable?(package)
-          # check for weight limits on service
-          country_weight_error? package
-        end
-
-        def country_weight_error?(package)
-          max_weight = max_weight_for_country(package.order.ship_address.country)
-          raise Spree::ShippingError, "#{I18n.t('spree.shipping_error')}: The maximum per package weight for the selected service from the selected country is #{max_weight} ounces." unless valid_weight_for_package?(package, max_weight)
-        end
-
-        # zero weight check means no check
-        # nil check means service isn't available for that country
-        def valid_weight_for_package?(package, max_weight)
-          return false if max_weight.nil?
-          return true if max_weight.zero?
-          package.weight <= max_weight
-        end
-
         def retrieve_rates(origin, destination, shipment_packages)
-          EasyPost.api_key = ENV['EASYPOST_API_KEY']
-
           to_address = EasyPost::Address.create(
             street1: destination.address1,
             street2: destination.address2,
@@ -215,15 +168,24 @@ module Spree
         end
 
         def build_location(address)
-          ::ActiveShipping::Location.new(country: address.country.iso,
-                                         state: fetch_best_state_from_address(address),
-                                         city: address.city,
-                                         zip: address.zipcode)
+          ::EasyPost::Address.create(
+            street1: address.address1,
+            street2: address.address2,
+            city: address.city,
+            state: address.state,
+            zip: address.zipcode,
+            country: address.country.iso
+          )
+
+          # ::ActiveShipping::Location.new(country: address.country.iso,
+          #                                state: fetch_best_state_from_address(address),
+          #                                city: address.city,
+          #                                zip: address.zipcode)
         end
 
-        def retrieve_rates_from_cache(package, origin, destination, max_weight)
+        def retrieve_rates_from_cache(package, origin, destination)
           Rails.cache.fetch(cache_key(package)) do
-            shipment_packages = package_builder.process(package, max_weight)
+            shipment_packages = package_builder.process(package)
             # shipment_packages = packages(package)
             if shipment_packages.empty?
               {}

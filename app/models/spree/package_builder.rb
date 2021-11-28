@@ -1,10 +1,6 @@
 module Spree
   class PackageBuilder
-    attr_accessor :max_weight
-
-    def process(solidus_package, max_weight)
-      # We compute and set the max_weight once, at the beginning of the process
-      @max_weight = max_weight
+    def process(solidus_package)
       to_packages(solidus_package)
     end
 
@@ -29,9 +25,7 @@ module Spree
         item_weight = default_weight if item_weight <= 0
         item_weight *= multiplier
 
-        if (item_weight > max_weight) && max_weight > 0
-          raise Spree::ShippingError, "#{I18n.t('spree.shipping_error')}: The maximum per package weight for the selected service from the selected country is #{max_weight} ounces."
-        end
+
 
         item_weight
       end
@@ -56,13 +50,13 @@ module Spree
         product  = variant.product
 
         product.product_packages.each do |product_package|
-          if product_package.weight.to_f <= max_weight || max_weight == 0
-            quantity.times do
-              packages << product_package
-            end
-          else
-            raise Spree::ShippingError, "#{I18n.t('spree.shipping_error')}: The maximum per package weight for the selected service from the selected country is #{max_weight} ounces."
+          # if product_package.weight.to_f <= max_weight || max_weight == 0
+          quantity.times do
+            packages << product_package
           end
+          # else
+          #   raise Spree::ShippingError, "#{I18n.t('spree.shipping_error')}: The maximum per package weight for the selected service from the selected country is #{max_weight} ounces."
+          # end
         end
       end
 
@@ -89,22 +83,22 @@ module Spree
       dimensions = convert_package_to_dimensions_array(solidus_package)
       item_specific_packages = convert_package_to_item_packages_array(product_with_product_packages)
 
-      if max_weight <= 0
-        active_shipping_packages << ::ActiveShipping::Package.new(weights.sum, dimensions, units: units) unless weights.empty?
-      else
+      # if max_weight <= 0
+      #   active_shipping_packages << ::ActiveShipping::Package.new(weights.sum, dimensions, units: units) unless weights.empty?
+      # else
         package_weight = 0
 
         weights.each do |content_weight|
-          if package_weight + content_weight <= max_weight
-            package_weight += content_weight
-          else
+          # if package_weight + content_weight <= max_weight
+          #   package_weight += content_weight
+          # else
             active_shipping_packages << ::ActiveShipping::Package.new(package_weight, dimensions, units: units)
             package_weight = content_weight
-          end
+          # end
         end
 
         active_shipping_packages << ::ActiveShipping::Package.new(package_weight, dimensions, units: units) if package_weight > 0
-      end
+      # end
 
       item_specific_packages.each do |product_package|
         active_shipping_packages << ::ActiveShipping::Package.new(product_package.weight * multiplier, [product_package.length, product_package.width, product_package.height], units: units)

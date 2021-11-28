@@ -16,6 +16,6 @@ end
 
 desc 'Generates a dummy app for testing'
 task :test_app do
-  ENV['LIB_NAME'] = 'solidus_active_shipping'
+  ENV['LIB_NAME'] = 'solidus_active_shipping_easypost'
   Rake::Task['extension:test_app'].invoke
 end

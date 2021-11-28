@@ -5,10 +5,6 @@ module Spree
         def self.description
           I18n.t('spree.usps.express_mail')
         end
-
-        def self.service_api_name
-          'USPS Express'
-        end
       end
     end
   end

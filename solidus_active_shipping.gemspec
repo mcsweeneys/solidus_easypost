@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.author      = ['Solidus Team']
   s.email       = 'contact@solidus.io'
   s.homepage    = 'http://solidus.io'
-  s.summary     = 'Solidus extension for the active_shipping plugin.'
+  s.summary     = 'Solidus extension for the active_shipping plugin (now with easypost!).'
   s.description = 'Provide shipping rates and tracking for Active Merchant carriers'
 
   s.required_ruby_version = '>= 1.9.3'
@@ -28,7 +28,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'solidus_support'
   s.add_dependency 'solidus_backend', solidus_version
   s.add_dependency 'solidus_api', solidus_version
-  s.add_dependency 'active_shipping', '~> 1.13'
+  s.add_dependency 'easypost', '~> 3.4'
 
   s.add_development_dependency 'byebug'
   s.add_development_dependency 'capybara', '~> 2.1'

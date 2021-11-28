@@ -29,9 +29,9 @@ en:
     handling_fee: 'Handling Fee'
     max_weight_per_package: 'Max Weight Per Package'
     fedex:
-      express_saver: "FedEx Express Saver"
+      express_saver: "FedEx FEDEX_EXPRESS_SAVER"
       first_overnight: "FedEx First Overnight"
-      ground: "FedEx Ground Home Delivery"
+      ground: "FedEx FEDEX_GROUND"
       ground_home_delivery: "FedEx Ground Home Delivery"
       intl_economy: "FedEx International Economy"
       intl_economy_freight: "FedEx International Economy Freight"
@@ -42,13 +42,13 @@ en:
       intl_priority_saturday_delivery: "FedEx International Priority Saturday Delivery"
       one_day_freight: "FedEx 1 Day Freight"
       one_day_freight_saturday_delivery: "FedEx 1 Day Freight Saturday Delivery"
-      priority_overnight: "FedEx Priority Overnight"
+      priority_overnight: "FedEx PRIORITY_OVERNIGHT"
       priority_overnight_saturday_delivery: "FedEx Priority Overnight Saturday Delivery"
       saver: "FedEx Saver"
-      standard_overnight: "FedEx Standard Overnight"
+      standard_overnight: "FedEx STANDARD_OVERNIGHT"
       three_day_freight: "FedEx 3 Day Freight"
       three_day_freight_saturday_delivery: "FedEx 3 Day Freight Saturday Delivery"
-      two_day: "FedEx 2 Day"
+      two_day: "FedEx FEDEX_2_DAY"
       two_day_freight: "FedEx 2 Day Freight"
       two_day_freight_saturday_delivery: "FedEx 2 Day Freight Saturday Delivery"
       two_day_saturday_delivery: "FedEx 2 Day Saturday Delivery"

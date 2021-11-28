@@ -1,5 +1,8 @@
 module SolidusActiveShipping
   class Configuration < Spree::Preferences::Configuration
+    # Easypost
+    preference :easypost_api_key, :string, default: 'fakefakefake'
+
     # UPS
     preference :ups_login, :string, default: 'aunt_judy'
     preference :ups_password, :string, default: 'secret'
