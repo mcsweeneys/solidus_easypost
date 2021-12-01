@@ -62,7 +62,8 @@ module Spree
           )
 
           parcel = EasyPost::Parcel.create(
-            weight: shipment_package.weight.to_f
+            # Convert pounds to ounces for easypost. This ought to be configurable somewhere.
+            weight: shipment_package.weight.to_f * 16
           )
 
           shipment = EasyPost::Shipment.create(
