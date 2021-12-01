@@ -1,3 +1,8 @@
+Work in Progress
+================
+
+This gem is under heavy development. Stand by!
+
 Active Shipping
 ===============
 
