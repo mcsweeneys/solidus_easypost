@@ -10,6 +10,9 @@ module Spree
   module Calculator::Shipping
     module ActiveShipping
       class Base < ShippingCalculator
+        # Not ideal but it'll do for now
+        EasyPost.api_key = Spree::ActiveShipping::Config[:easypost_api_key]
+
         def self.service_name
           description
         end
@@ -32,58 +35,21 @@ module Spree
 
           return nil if rates_result.is_a?(Spree::ShippingError)
           return nil if rates_result.empty?
-
           rate = rates_result[self.class.description]
 
-          return nil unless rate
-          rate = rate.to_f + (Spree::ActiveShipping::Config[:handling_fee].to_f || 0.0)
-        end
-
-        def timing(line_items)
-          order = line_items.first.order
-          # TODO: Figure out where stock_location is supposed to come from.
-          # TODO: Figure out what this method actually does.
-          origin = ::EasyPost::Address.create(
-            street1: origin.address1,
-            street2: origin.address2,
-            city: origin.city,
-            state: origin.state,
-            zip: origin.postal_code,
-            country: origin.country.code(:alpha2).value
-          )
-
-          addr = order.ship_address
-          destination = ::EasyPost::Address.create(
-            street1: destination.address1,
-            street2: destination.address2,
-            city: destination.city,
-            state: destination.state,
-            zip: destination.postal_code,
-            country: destination.country.code(:alpha2).value
-          )
-
-          timings_result = Rails.cache.fetch(cache_key(package) + '-timings') do
-            retrieve_timings(origin, destination, packages(order))
-          end
-          raise timings_result if timings_result.is_a?(Spree::ShippingError)
-          return nil if timings_result.nil? || !timings_result.is_a?(Hash) || timings_result.empty?
-          timings_result[description]
+          rate.present? ? rate.to_f : nil
         end
 
         private
 
-        def package_builder
-          @package_builder ||= Spree::PackageBuilder.new
-        end
-
-        def retrieve_rates(origin, destination, shipment_packages)
+        def retrieve_rates(origin, destination, shipment_package)
           to_address = EasyPost::Address.create(
             street1: destination.address1,
             street2: destination.address2,
             city: destination.city,
             state: destination.state,
-            zip: destination.postal_code,
-            country: destination.country.code(:alpha2).value
+            zip: destination.zipcode,
+            country: destination.country.iso
           )
 
           from_address = EasyPost::Address.create(
@@ -91,12 +57,12 @@ module Spree
             street2: origin.address2,
             city: origin.city,
             state: origin.state,
-            zip: origin.postal_code,
-            country: origin.country.code(:alpha2).value
+            zip: origin.zipcode,
+            country: origin.country.iso
           )
 
           parcel = EasyPost::Parcel.create(
-            weight: shipment_packages.first.weight.to_f
+            weight: shipment_package.weight.to_f
           )
 
           shipment = EasyPost::Shipment.create(
@@ -113,46 +79,24 @@ module Spree
 
           return rate_hash
         # TODO: Deal with the API failures here. This isn't in ActiveShipping any longer!
-        rescue ::ActiveShipping::Error => e
-          if [::ActiveShipping::ResponseError].include?(e.class) && e.response.is_a?(::ActiveShipping::Response)
-            params = e.response.params
-            if params.key?('Response') && params['Response'].key?('Error') && params['Response']['Error'].key?('ErrorDescription')
-              message = params['Response']['Error']['ErrorDescription']
-            # Canada Post specific error message
-            elsif params.key?('eparcel') && params['eparcel'].key?('error') && params['eparcel']['error'].key?('statusMessage')
-              message = e.response.params['eparcel']['error']['statusMessage']
-            else
-              message = e.message
-            end
-          else
-            message = e.message
-          end
+        # rescue StandardError => e
+        #   if [StandardError].include?(e.class) && e.response.is_a?(::ActiveShipping::Response)
+        #     params = e.response.params
+        #     if params.key?('Response') && params['Response'].key?('Error') && params['Response']['Error'].key?('ErrorDescription')
+        #       message = params['Response']['Error']['ErrorDescription']
+        #     # Canada Post specific error message
+        #     elsif params.key?('eparcel') && params['eparcel'].key?('error') && params['eparcel']['error'].key?('statusMessage')
+        #       message = e.response.params['eparcel']['error']['statusMessage']
+        #     else
+        #       message = e.message
+        #     end
+        #   else
+        #     message = e.message
+        #   end
 
-          error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{message}")
-          Rails.cache.write @cache_key, error # write error to cache to prevent constant re-lookups
-          raise error
-        end
-
-        def retrieve_timings(origin, destination, packages)
-          if carrier.respond_to?(:find_time_in_transit)
-            response = carrier.find_time_in_transit(origin, destination, packages)
-            return response
-          end
-        rescue ::ActiveShipping::ResponseError => re
-          if re.response.is_a?(::ActiveShipping::Response)
-            params = re.response.params
-            if params.key?('Response') && params['Response'].key?('Error') && params['Response']['Error'].key?('ErrorDescription')
-              message = params['Response']['Error']['ErrorDescription']
-            else
-              message = re.message
-            end
-          else
-            message = re.message
-          end
-
-          error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{message}")
-          Rails.cache.write @cache_key + '-timings', error # write error to cache to prevent constant re-lookups
-          raise error
+        #   error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{message}")
+        #   Rails.cache.write @cache_key, error # write error to cache to prevent constant re-lookups
+        #   raise error
         end
 
         def cache_key(package)
@@ -167,30 +111,12 @@ module Spree
           address.state ? address.state.abbr : address.state_name
         end
 
-        def build_location(address)
-          ::EasyPost::Address.create(
-            street1: address.address1,
-            street2: address.address2,
-            city: address.city,
-            state: address.state,
-            zip: address.zipcode,
-            country: address.country.iso
-          )
-
-          # ::ActiveShipping::Location.new(country: address.country.iso,
-          #                                state: fetch_best_state_from_address(address),
-          #                                city: address.city,
-          #                                zip: address.zipcode)
-        end
-
         def retrieve_rates_from_cache(package, origin, destination)
           Rails.cache.fetch(cache_key(package)) do
-            shipment_packages = package_builder.process(package)
-            # shipment_packages = packages(package)
-            if shipment_packages.empty?
+            if package.empty?
               {}
             else
-              retrieve_rates(origin, destination, shipment_packages)
+              retrieve_rates(origin, destination, package)
             end
           end
         end
