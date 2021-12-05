@@ -79,27 +79,13 @@ module Spree
           rate_hash = Hash[*rates.flatten]
 
           return rate_hash
-        # TODO: Deal with the API failures here. This isn't in ActiveShipping any longer!
-        # rescue StandardError => e
-        #   if [StandardError].include?(e.class) && e.response.is_a?(::ActiveShipping::Response)
-        #     params = e.response.params
-        #     if params.key?('Response') && params['Response'].key?('Error') && params['Response']['Error'].key?('ErrorDescription')
-        #       message = params['Response']['Error']['ErrorDescription']
-        #     # Canada Post specific error message
-        #     elsif params.key?('eparcel') && params['eparcel'].key?('error') && params['eparcel']['error'].key?('statusMessage')
-        #       message = e.response.params['eparcel']['error']['statusMessage']
-        #     else
-        #       message = e.message
-        #     end
-        #   else
-        #     message = e.message
-        #   end
-
-        #   error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{message}")
-        #   Rails.cache.write @cache_key, error # write error to cache to prevent constant re-lookups
-        #   raise error
+        rescue StandardError => e
+          error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{e.message}")
+          Rails.cache.write @cache_key, error # write error to cache to prevent constant re-lookups
+          raise error
         end
 
+        # TODO: Refactor this method
         def cache_key(package)
           stock_location = package.stock_location.nil? ? '' : "#{package.stock_location.id}-"
           order = package.order
@@ -108,9 +94,11 @@ module Spree
           @cache_key = "#{stock_location}-#{order.number}-#{ship_address.country.iso}-#{fetch_best_state_from_address(ship_address)}-#{ship_address.city}-#{ship_address.zipcode}-#{contents_hash}-#{I18n.locale}".delete(' ')
         end
 
+        # TODO: Do we need this at all? (doubtful)
         def fetch_best_state_from_address(address)
           address.state ? address.state.abbr : address.state_name
         end
+
 
         def retrieve_rates_from_cache(package, origin, destination)
           Rails.cache.fetch(cache_key(package)) do
