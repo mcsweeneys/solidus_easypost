@@ -62,8 +62,7 @@ module Spree
           )
 
           parcel = EasyPost::Parcel.create(
-            # Convert pounds to ounces for easypost. This ought to be configurable somewhere.
-            weight: shipment_package.weight.to_f * 16
+            weight: shipment_package.weight.to_f * Spree::ActiveShipping::Config[:unit_multiplier]
           )
 
           shipment = EasyPost::Shipment.create(
@@ -80,7 +79,6 @@ module Spree
 
           return rate_hash
         rescue StandardError => e
-          binding.pry
           error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{e.message}")
           Rails.cache.write @cache_key, error # write error to cache to prevent constant re-lookups
           raise error

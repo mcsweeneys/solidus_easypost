@@ -3,7 +3,7 @@ class Spree::Admin::ActiveShippingSettingsController < Spree::Admin::BaseControl
     @config = Spree::ActiveShipping::Config
 
     @preferences_GeneralSettings = [:units, :unit_multiplier, :default_weight, :handling_fee,
-                                    :max_weight_per_package, :test_mode]
+                                    :max_weight_per_package, :easypost_api_key, :test_mode]
   end
 
   def update
