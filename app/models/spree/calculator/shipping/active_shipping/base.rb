@@ -74,6 +74,8 @@ module Spree
             }
           )
 
+          raise
+
           rates = shipment.rates.map{|r| ["#{r.carrier} #{r.service}", r.rate]}
           rate_hash = Hash[*rates.flatten]
 
