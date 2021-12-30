@@ -10,9 +10,6 @@ module Spree
   module Calculator::Shipping
     module ActiveShipping
       class Base < ShippingCalculator
-        # Not ideal but it'll do for now
-        EasyPost.api_key = Spree::ActiveShipping::Config[:easypost_api_key]
-
         def self.service_name
           description
         end
@@ -43,6 +40,8 @@ module Spree
         private
 
         def retrieve_rates(origin, destination, shipment_package)
+          ensure_easypost_api_key_set!
+
           to_address = EasyPost::Address.create(
             street1: destination.address1,
             street2: destination.address2,
@@ -73,6 +72,7 @@ module Spree
               special_rates_eligibility: 'USPS.MEDIAMAIL'
             }
           )
+
 
           rates = shipment.rates.map{|r| ["#{r.carrier} #{r.service}", r.rate]}
           rate_hash = Hash[*rates.flatten]
@@ -107,6 +107,14 @@ module Spree
               retrieve_rates(origin, destination, package)
             end
           end
+        end
+
+        private
+
+        # A bit obtuse way to ensure the EasyPost API key is set, but this enables us to
+        # avoid doing weird loading in the parent application and/or this gem.
+        def ensure_easypost_api_key_set!
+          EasyPost.api_key = Spree::ActiveShipping::Config[:easypost_api_key]
         end
       end
     end

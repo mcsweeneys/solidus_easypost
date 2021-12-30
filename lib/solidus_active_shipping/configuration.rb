@@ -10,6 +10,6 @@ module SolidusActiveShipping
 
     # General
     preference :test_mode, :boolean, default: false
-    preference :easypost_api_key, :string, default: 'eaypost_api_key'
+    preference :easypost_api_key, :string, default: 'changeme'
   end
 end
