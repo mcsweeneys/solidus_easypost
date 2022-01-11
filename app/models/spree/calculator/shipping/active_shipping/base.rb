@@ -84,7 +84,6 @@ module Spree
           raise error
         end
 
-        # TODO: Refactor this method
         def cache_key(package)
           stock_location = package.stock_location.nil? ? '' : "#{package.stock_location.id}-"
           order = package.order
@@ -93,11 +92,10 @@ module Spree
           @cache_key = "#{stock_location}-#{order.number}-#{ship_address.country.iso}-#{fetch_best_state_from_address(ship_address)}-#{ship_address.city}-#{ship_address.zipcode}-#{contents_hash}-#{I18n.locale}".delete(' ')
         end
 
-        # TODO: Do we need this at all? (doubtful)
+
         def fetch_best_state_from_address(address)
           address.state ? address.state.abbr : address.state_name
         end
-
 
         def retrieve_rates_from_cache(package, origin, destination)
           Rails.cache.fetch(cache_key(package)) do
