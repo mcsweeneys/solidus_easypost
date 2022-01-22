@@ -77,6 +77,8 @@ module Spree
           rates = shipment.rates.map{|r| ["#{r.carrier} #{r.service}", r.rate]}
           rate_hash = Hash[*rates.flatten]
 
+          binding.pry
+
           return rate_hash
         rescue StandardError => e
           error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{e.message}")
