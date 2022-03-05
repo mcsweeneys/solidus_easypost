@@ -75,14 +75,14 @@ module Spree
             }
           )
 
-
           rates = shipment.rates.map{|r| ["#{r.carrier} #{r.service}", r.rate]}
           rate_hash = Hash[*rates.flatten]
 
-          binding.pry
+          Rails.logger.info { "EasyPost Rates: #{rate_hash}" }
 
           return rate_hash
         rescue StandardError => e
+          Rails.logger.info { "EasyPost Error: #{e} / #{e.message}" }
           error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{e.message}")
           Rails.cache.write @cache_key, error # write error to cache to prevent constant re-lookups
           raise error
