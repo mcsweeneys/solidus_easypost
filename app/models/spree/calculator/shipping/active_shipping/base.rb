@@ -40,7 +40,9 @@ module Spree
         private
 
         def retrieve_rates(origin, destination, shipment_package)
+          Rails.logger.info { "EasyPost API Key: #{EasyPost.api_key}" }
           ensure_easypost_api_key_set!
+          Rails.logger.info { "EasyPost API Key: #{EasyPost.api_key}" }
 
           to_address = EasyPost::Address.create(
             street1: destination.address1,
@@ -114,6 +116,7 @@ module Spree
         # A bit obtuse way to ensure the EasyPost API key is set, but this enables us to
         # avoid doing weird loading in the parent application and/or this gem.
         def ensure_easypost_api_key_set!
+          Rails.logger.info { "Ensuring EasyPost API Key is set. Value from Solidus: #{Spree::ActiveShipping::Config[:easypost_api_key]}" }
           EasyPost.api_key = Spree::ActiveShipping::Config[:easypost_api_key]
         end
       end
