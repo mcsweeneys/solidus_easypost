@@ -40,9 +40,9 @@ module Spree
         private
 
         def retrieve_rates(origin, destination, shipment_package)
-          Rails.logger.info { "EasyPost API Key: #{EasyPost.api_key}" }
+          Rails.logger.debug { "EasyPost API Key: #{EasyPost.api_key}" }
           ensure_easypost_api_key_set!
-          Rails.logger.info { "EasyPost API Key: #{EasyPost.api_key}" }
+          Rails.logger.debug { "EasyPost API Key: #{EasyPost.api_key}" }
 
           to_address = EasyPost::Address.create(
             street1: destination.address1,
@@ -78,11 +78,11 @@ module Spree
           rates = shipment.rates.map{|r| ["#{r.carrier} #{r.service}", r.rate]}
           rate_hash = Hash[*rates.flatten]
 
-          Rails.logger.info { "EasyPost Rates: #{rate_hash}" }
+          Rails.logger.debug { "EasyPost Rates: #{rate_hash}" }
 
           return rate_hash
         rescue StandardError => e
-          Rails.logger.info { "EasyPost Error: #{e} / #{e.message}" }
+          Rails.logger.debug { "EasyPost Error: #{e} / #{e.message}" }
           error = Spree::ShippingError.new("#{I18n.t('spree.shipping_error')}: #{e.message}")
           Rails.cache.write @cache_key, error # write error to cache to prevent constant re-lookups
           raise error
@@ -116,7 +116,7 @@ module Spree
         # A bit obtuse way to ensure the EasyPost API key is set, but this enables us to
         # avoid doing weird loading in the parent application and/or this gem.
         def ensure_easypost_api_key_set!
-          Rails.logger.info { "Ensuring EasyPost API Key is set. Value from Solidus: #{Spree::ActiveShipping::Config[:easypost_api_key]}" }
+          Rails.logger.debug { "Ensuring EasyPost API Key is set. Value from Solidus: #{Spree::ActiveShipping::Config[:easypost_api_key]}" }
           EasyPost.api_key = Spree::ActiveShipping::Config[:easypost_api_key]
         end
       end
