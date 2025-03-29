@@ -24,17 +24,18 @@ module SolidusActiveShipping
       end
     end
 
-    initializer 'solidus_active_shipping.register.calculators', after: 'spree.register.calculators' do |app|
-      if app.config.spree.calculators.shipping_methods
-        classes = Dir.chdir File.join(File.dirname(__FILE__), "../../app/models") do
-          Dir["spree/calculator/**/*.rb"].reject {|path| path =~ /base.rb$/ }.map do |path|
-            path.gsub('.rb', '').camelize.constantize
-          end
-        end
+    # initializer 'solidus_active_shipping.register.calculators', after: 'spree.register.calculators' do |app|
+    #   if app.config.spree.calculators.shipping_methods
+    #     classes = Dir.chdir File.join(File.dirname(__FILE__), "../../app/models") do
+    #       Dir["spree/calculator/**/*.rb"].reject {|path| path =~ /base.rb$/ }.map do |path|
+    #         # binding.pry
+    #         # path.gsub('.rb', '').camelize.constantize
+    #       end
+    #     end
 
-        app.config.spree.calculators.shipping_methods.concat classes
-      end
-    end
+    #     app.config.spree.calculators.shipping_methods.concat [Spree::Calculator::Shipping::ActiveShipping::CanadaPost::ParcelSurface]
+    #   end
+    # end
 
     # sets the manifests / assets to be precompiled, even when initialize_on_precompile is false
     initializer 'spree.assets.precompile', group: :all do |app|
