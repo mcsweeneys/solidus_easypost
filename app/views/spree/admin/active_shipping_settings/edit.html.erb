@@ -4,7 +4,7 @@
   <%= I18n.t('spree.active_shipping_settings') %>
 <% end %>
 
-<%= form_tag admin_active_shipping_settings_path, method: :put  do |form| %>
+<%= form_with url: admin_active_shipping_settings_path, method: :put do |form| %>
   <div id="preferences" data-hook>
     <fieldset class="general no-border-top">
       <div class="row">
@@ -24,11 +24,7 @@
           </fieldset>
         </div>
       </div>
-
-      <div class="form-buttons filter-actions actions" data-hook="buttons">
-        <%= button I18n.t('spree.update') %>
-        <%= button_link_to I18n.t('spree.cancel'), edit_admin_active_shipping_settings_url %>
-      </div>
+      <%= form.submit "Save" %>
     </fieldset>
   </div>
 <% end %>
